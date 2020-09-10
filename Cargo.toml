@@ -22,3 +22,6 @@ serde_json = "1.0.57"
 serde_urlencoded = "0.7.0"
 thiserror = "1.0.20"
 uuid = { version = "0.8.1", features = ["v1"] }
+
+[dev-dependencies]
+tokio = { version = "0.2.22", features = ["macros", "rt-threaded"] }
