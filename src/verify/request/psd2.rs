@@ -1,14 +1,16 @@
 use serde::Serialize;
 
+use super::Verification;
+
 #[derive(Debug, Default, Serialize)]
-pub struct Request {
+pub struct Psd2 {
     pub payee: String,
     pub amount: f64,
     #[serde(rename = "lg")]
     pub language: Option<Language>,
 }
 
-impl super::Kind for Request {
+impl Verification for Psd2 {
     const PATH: &'static str = "/psd2";
 }
 

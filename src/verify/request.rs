@@ -10,7 +10,6 @@ use hyper::{Method, Request, Response};
 use phonenumber::{country::Id, PhoneNumber};
 use serde::{Deserialize, Serialize};
 
-use self::psd2::Request as Psd2;
 use super::{ErrorCode, PendingVerify, RequestId, Result};
 use crate::auth::{ApiKey, ApiSecret, Auth};
 
@@ -18,13 +17,13 @@ mod normal;
 mod psd2;
 
 #[doc(hidden)]
-pub trait Kind: Default + Serialize {
+pub trait Verification: Default + Serialize {
     const PATH: &'static str;
 }
 
-pub struct Verify<C, T: Default = normal::Request> {
+pub struct Verify<C, V: Verification = normal::Normal> {
     http_client: C,
-    request_body: RequestBody<T>,
+    request_body: RequestBody<V>,
 }
 
 impl<C> Verify<C> {
@@ -47,7 +46,7 @@ impl<C> Verify<C> {
         })
     }
 
-    pub fn psd2(self, payee: impl Into<String>, amount_eur: f64) -> Verify<C, Psd2> {
+    pub fn psd2(self, payee: impl Into<String>, amount_eur: f64) -> Verify<C, psd2::Psd2> {
         Verify {
             http_client: self.http_client,
             request_body: RequestBody {
@@ -61,7 +60,7 @@ impl<C> Verify<C> {
                 pin_expiry: self.request_body.pin_expiry,
                 next_event_wait: self.request_body.next_event_wait,
                 workflow_id: self.request_body.workflow_id,
-                inner: psd2::Request {
+                req_specific: psd2::Psd2 {
                     payee: payee.into(),
                     amount: amount_eur,
                     language: None,
@@ -71,21 +70,21 @@ impl<C> Verify<C> {
     }
 
     pub fn language(mut self, lang: Language) -> Self {
-        self.request_body.inner.language = Some(lang);
+        self.request_body.req_specific.language = Some(lang);
         self
     }
 }
 
-impl<C> Verify<C, Psd2> {
+impl<C> Verify<C, psd2::Psd2> {
     pub fn language(mut self, lang: Psd2Language) -> Self {
-        self.request_body.inner.language = Some(lang);
+        self.request_body.req_specific.language = Some(lang);
         self
     }
 }
-impl<C, T: Kind> Verify<C, T>
+impl<C, V> Verify<C, V>
 where
     C: Service<Request<Body>, Response = Response<Body>, Error = hyper::Error>,
-    T: Kind,
+    V: Verification,
 {
     pub fn country(mut self, country: Id) -> Self {
         self.request_body.country = Some(country);
@@ -123,7 +122,7 @@ where
             request_id: RequestId,
         }
 
-        let req = super::encode_request(Method::POST, T::PATH, &self.request_body)?;
+        let req = super::encode_request(Method::POST, V::PATH, &self.request_body)?;
         let res = self.http_client.call(req).await?;
         let ResponseBody { request_id } = super::decode_response::<_, ErrorCode>(res).await?;
 
@@ -136,7 +135,7 @@ where
     }
 }
 
-impl<C, T: Debug + Default> Debug for Verify<C, T> {
+impl<C, V: Debug + Verification> Debug for Verify<C, V> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         f.debug_struct(stringify!(Verify))
             .field("request_body", &self.request_body)
@@ -146,7 +145,7 @@ impl<C, T: Debug + Default> Debug for Verify<C, T> {
 
 #[derive(Debug, Default, Serialize)]
 #[serde(deny_unknown_fields)]
-struct RequestBody<T: Default> {
+struct RequestBody<V: Verification> {
     api_key: ApiKey,
     api_secret: ApiSecret,
     number: String,
@@ -158,7 +157,7 @@ struct RequestBody<T: Default> {
     next_event_wait: Option<u64>,
     workflow_id: Option<Workflow>,
     #[serde(flatten)]
-    inner: T,
+    req_specific: V,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]

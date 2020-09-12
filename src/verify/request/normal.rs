@@ -1,12 +1,14 @@
 use serde::Serialize;
 
+use super::Verification;
+
 #[derive(Debug, Default, Serialize)]
-pub struct Request {
+pub struct Normal {
     #[serde(rename = "lg")]
     pub language: Option<Language>,
 }
 
-impl super::Kind for Request {
+impl Verification for Normal {
     const PATH: &'static str = "";
 }
 
