@@ -1,6 +1,7 @@
 #![deny(missing_debug_implementations)]
 #![forbid(unsafe_code)]
 
+pub use self::error::{Error, ErrorKind};
 pub use self::sig::{Signature, SignatureMethod};
 
 use std::fmt::{self, Debug, Formatter};
@@ -12,12 +13,13 @@ use hyper::{Request, Response};
 use hyper_tls::HttpsConnector;
 use phonenumber::PhoneNumber;
 
-use self::auth::{Auth, AuthBuilder, AuthError};
+use self::auth::{Auth, AuthBuilder};
 use self::verify::Verify;
 
 pub mod verify;
 
 mod auth;
+mod error;
 mod sig;
 
 const VONAGE_URL_BASE: &str = "https://api.nexmo.com";
@@ -127,34 +129,6 @@ impl<C> Debug for ClientBuilder<C> {
             .field("auth_builder", &self.auth_builder)
             .field("sms_signature", &self.sms_signature)
             .finish()
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error("authentication error: {0}")]
-    Auth(#[from] AuthError),
-    #[error("HTTP error: {0}")]
-    Http(#[from] hyper::Error),
-    #[error("JSON error: {0}")]
-    Json(#[from] serde_json::Error),
-    #[error("www-urlencode error: {0}")]
-    UrlEncode(#[from] serde_urlencoded::ser::Error),
-    #[error("received unexpected status code: {0}")]
-    Status(hyper::StatusCode),
-    #[error("{0}")]
-    Custom(String),
-}
-
-impl From<hyper::StatusCode> for Error {
-    fn from(code: hyper::StatusCode) -> Self {
-        Error::Status(code)
-    }
-}
-
-impl From<String> for Error {
-    fn from(text: String) -> Self {
-        Error::Custom(text)
     }
 }
 

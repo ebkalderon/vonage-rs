@@ -10,7 +10,7 @@ use hyper::{Method, Request, Response};
 use phonenumber::{country::Id, PhoneNumber};
 use serde::{Deserialize, Serialize};
 
-use super::{PendingVerify, RequestId, Result};
+use super::{Error, PendingVerify, RequestId, Result};
 use crate::auth::{ApiKey, ApiSecret, Auth};
 
 mod normal;
@@ -122,9 +122,14 @@ where
             request_id: RequestId,
         }
 
-        let req = super::encode_request(Method::POST, V::PATH, &self.request_body)?;
-        let res = self.http_client.call(req).await?;
-        let ResponseBody { request_id } = super::decode_response(res).await?;
+        let request = super::encode_request(Method::POST, V::PATH, &self.request_body)?;
+        let response = self
+            .http_client
+            .call(request)
+            .await
+            .map_err(Error::new_verify)?;
+
+        let ResponseBody { request_id } = super::decode_response(response).await?;
 
         Ok(PendingVerify {
             http_client: self.http_client,

@@ -1,9 +1,11 @@
 use std::fmt::{self, Debug, Formatter};
 use std::time::SystemTime;
 
+use anyhow::anyhow;
 use hyper::header::{HeaderName, AUTHORIZATION};
 use serde::Serialize;
-use thiserror::Error;
+
+use crate::{Error, Result};
 
 static CLOCK_SEQUENCE: uuid::v1::Context = uuid::v1::Context::new(0);
 
@@ -34,34 +36,42 @@ impl Auth {
         }
     }
 
-    pub fn api_key_pair(&self) -> Result<&(ApiKey, ApiSecret), AuthError> {
-        self.api_key.as_ref().ok_or(AuthError::MissingApiKey)
+    pub fn api_key_pair(&self) -> Result<&(ApiKey, ApiSecret)> {
+        self.api_key
+            .as_ref()
+            .ok_or_else(|| Error::new_auth(anyhow!("product requires an API key to authenticate")))
     }
 
-    pub fn to_auth_header(&self) -> Result<(HeaderName, String), AuthError> {
+    pub fn to_auth_header(&self) -> Result<(HeaderName, String)> {
         let (ApiKey(key), ApiSecret(secret)) = self.api_key_pair()?;
         let header_value = format!("Bearer {}", base64::encode(format!("{}:{}", key, secret)));
         Ok((AUTHORIZATION, header_value))
     }
 
     #[rustfmt::skip]
-    pub fn generate_jwt<T: Serialize>(&self, claims: T) -> Result<String, AuthError> {
+    pub fn generate_jwt<T: Serialize>(&self, claims: T) -> Result<String> {
         use chrono::Utc;
         use jsonwebtoken::{EncodingKey, Header};
         use serde_json::json;
 
         if let Some((application_id, private_key)) = self.jwt.as_ref() {
-            let mut claims = serde_json::to_value(claims)?;
+            let mut claims = serde_json::to_value(claims)
+                .map_err(|e| anyhow!("could not deserialize claims: {}", e))
+                .map_err(Error::new_auth)?;
+
             if let Some(ref mut map) = claims.as_object_mut() {
                 map.insert("application_id".into(), json!(application_id));
                 map.entry("iat").or_insert_with(|| json!(Utc::now().timestamp()));
                 map.entry("jti").or_insert_with(|| json!(gen_uuid_v1_str()));
             }
+
             let private_key = EncodingKey::from_secret(private_key.as_bytes());
             let token = jsonwebtoken::encode(&Header::default(), &claims, &private_key)?;
             Ok(token)
         } else {
-            Err(AuthError::MissingJwtCreds)
+            Err(Error::new_auth(anyhow!(
+                "product requires an application ID and private key to generate JWTs"
+            )))
         }
     }
 }
@@ -92,20 +102,6 @@ fn gen_uuid_v1_str() -> String {
         .to_string()
 }
 
-#[derive(Debug, Error)]
-pub enum AuthError {
-    #[error("no credentials specified")]
-    EmptyCreds,
-    #[error("product requires an API key and secret to authenticate")]
-    MissingApiKey,
-    #[error("product requires an application ID and private key to generate JWTs")]
-    MissingJwtCreds,
-    #[error("could not deserialize claims: {0}")]
-    Claims(#[from] serde_json::Error),
-    #[error("{0}")]
-    Jwt(#[from] jsonwebtoken::errors::Error),
-}
-
 #[derive(Debug)]
 pub struct AuthBuilder {
     inner: Auth,
@@ -122,11 +118,11 @@ impl AuthBuilder {
         self
     }
 
-    pub fn build(self) -> Result<Auth, AuthError> {
+    pub fn build(self) -> Result<Auth> {
         if self.inner.api_key.is_some() || self.inner.jwt.is_some() {
             Ok(self.inner)
         } else {
-            Err(AuthError::EmptyCreds)
+            Err(Error::new_auth(anyhow!("no credentials specified")))
         }
     }
 }

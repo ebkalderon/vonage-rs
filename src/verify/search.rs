@@ -7,7 +7,7 @@ use phonenumber::PhoneNumber;
 use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
 
-use super::{PendingVerify, RequestId, Result};
+use super::{Error, PendingVerify, RequestId, Result};
 use crate::auth::{ApiKey, ApiSecret};
 
 pub async fn search<'a, I, C>(iter: I) -> Result<Vec<Option<VerifyInfo>>>
@@ -56,14 +56,17 @@ where
             },
         )?;
 
-        let response = http_client.call(request).await?;
+        let response = http_client.call(request).await.map_err(Error::new_verify)?;
         match response.status() {
             StatusCode::OK => {}
             other => return Err(other.into()),
         }
 
-        let bytes = hyper::body::to_bytes(response.into_body()).await?;
-        let list: Vec<Response> = serde_json::from_slice(&bytes)?;
+        let bytes = hyper::body::to_bytes(response.into_body())
+            .await
+            .map_err(Error::new_verify)?;
+
+        let list: Vec<Response> = serde_json::from_slice(&bytes).map_err(Error::new_verify)?;
         let results = list
             .into_iter()
             .map(|res| match res {

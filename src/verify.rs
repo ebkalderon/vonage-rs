@@ -7,7 +7,7 @@ use std::fmt::{self, Debug, Display, Formatter};
 use hyper::{Body, Method, Request, Response, StatusCode};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use super::{Result, VONAGE_URL_BASE};
+use super::{Error, Result, VONAGE_URL_BASE};
 
 mod pending;
 mod request;
@@ -28,7 +28,7 @@ where
 {
     use hyper::header::CONTENT_TYPE;
 
-    let encoded = serde_urlencoded::to_string(body)?;
+    let encoded = serde_urlencoded::to_string(body).map_err(Error::new_verify)?;
     let request = Request::builder()
         .method(method)
         .uri(format!("{}/verify{}/json", VONAGE_URL_BASE, path))
@@ -72,16 +72,41 @@ where
         other => return Err(other.into()),
     }
 
-    let bytes = hyper::body::to_bytes(response.into_body()).await?;
-    match serde_json::from_slice(&bytes)? {
+    let bytes = hyper::body::to_bytes(response.into_body())
+        .await
+        .map_err(Error::new_verify)?;
+
+    match serde_json::from_slice(&bytes).map_err(Error::new_verify)? {
         ResponseBody::Success { inner, .. } => Ok(inner),
         ResponseBody::Error {
             status, error_text, ..
-        } => Err(format!("{}: {}", status, error_text).into()),
+        } => Err(VerifyError::new(status, error_text).into()),
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, thiserror::Error)]
+#[error("{error_text} ({status})")]
+pub struct VerifyError {
+    status: ErrorCode,
+    error_text: String,
+}
+
+impl VerifyError {
+    fn new(status: ErrorCode, error_text: String) -> Self {
+        VerifyError { status, error_text }
+    }
+}
+
+impl From<VerifyError> for Error {
+    fn from(e: VerifyError) -> Self {
+        match e.status {
+            ErrorCode::CodeMismatch => Error::new_code_mismatch(e),
+            _ => Error::new_verify(e),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
 enum ErrorCode {
     #[serde(rename = "1")]
     Throttled,
