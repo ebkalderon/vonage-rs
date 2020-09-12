@@ -4,7 +4,7 @@ pub use self::search::*;
 
 use std::fmt::{self, Debug, Display, Formatter};
 
-use hyper::{http, Body, Method, Response, StatusCode};
+use hyper::{Body, Method, Request, Response, StatusCode};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use super::{Result, VONAGE_URL_BASE};
@@ -22,14 +22,14 @@ impl Display for RequestId {
     }
 }
 
-fn encode_request<T>(method: Method, path: &str, body: T) -> Result<http::Request<Body>>
+fn encode_request<T>(method: Method, path: &str, body: T) -> Result<Request<Body>>
 where
     T: Serialize,
 {
     use hyper::header::CONTENT_TYPE;
 
     let encoded = serde_urlencoded::to_string(body)?;
-    let request = http::Request::builder()
+    let request = Request::builder()
         .method(method)
         .uri(format!("{}/verify{}/json", VONAGE_URL_BASE, path))
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -39,10 +39,9 @@ where
     Ok(request)
 }
 
-async fn decode_response<T, E>(response: Response<Body>) -> Result<T>
+async fn decode_response<T>(response: Response<Body>) -> Result<T>
 where
     T: DeserializeOwned,
-    E: DeserializeOwned + Display,
 {
     #[derive(Deserialize)]
     enum SuccessCode {
@@ -53,7 +52,7 @@ where
     #[derive(Deserialize)]
     #[serde(deny_unknown_fields)]
     #[serde(untagged)]
-    enum Response<T, E> {
+    enum ResponseBody<T> {
         Success {
             #[allow(dead_code)]
             status: SuccessCode,
@@ -63,7 +62,7 @@ where
         Error {
             #[allow(dead_code)]
             request_id: Option<RequestId>,
-            status: E,
+            status: ErrorCode,
             error_text: String,
         },
     }
@@ -74,9 +73,9 @@ where
     }
 
     let bytes = hyper::body::to_bytes(response.into_body()).await?;
-    match serde_json::from_slice::<Response<_, E>>(&bytes)? {
-        Response::Success { inner, .. } => Ok(inner),
-        Response::Error {
+    match serde_json::from_slice(&bytes)? {
+        ResponseBody::Success { inner, .. } => Ok(inner),
+        ResponseBody::Error {
             status, error_text, ..
         } => Err(format!("{}: {}", status, error_text).into()),
     }

@@ -4,7 +4,7 @@ use hyper::service::Service;
 use hyper::{Body, Method, Request, Response};
 use serde::{Deserialize, Serialize};
 
-use super::{ErrorCode, RequestId, Result};
+use super::{RequestId, Result};
 use std::fmt::{self, Debug, Formatter};
 
 use crate::auth::{ApiKey, ApiSecret};
@@ -51,7 +51,7 @@ where
         )?;
 
         let response = self.http_client.call(request).await?;
-        super::decode_response::<(), ErrorCode>(response).await
+        super::decode_response(response).await
     }
 
     pub async fn check(mut self, code: &str) -> Result<Verified> {
@@ -75,7 +75,7 @@ where
         )?;
 
         let response = self.http_client.call(request).await?;
-        super::decode_response::<_, ErrorCode>(response).await
+        super::decode_response(response).await
     }
 }
 
