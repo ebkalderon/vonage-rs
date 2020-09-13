@@ -1,18 +1,18 @@
-#[derive(Debug, thiserror::Error)]
-#[error("{kind}")]
-pub struct Error {
-    kind: ErrorKind,
-    source: Option<anyhow::Error>,
-}
+//! Error types used throughout the library.
 
+/// A list specifying general categories of Vonage API errors.
 #[derive(Clone, Copy, Debug, thiserror::Error)]
 pub enum ErrorKind {
+    /// An authentication error occurred.
     #[error("authentication error")]
     Auth,
+    /// An HTTP error occurred.
     #[error("HTTP error")]
     Http,
+    /// Received an unexpected HTTP status code.
     #[error("received unexpected status code: {0}")]
     Status(hyper::StatusCode),
+    /// An error occurred in the [Verify (2FA)](https://developer.nexmo.com/api/verify) API.
     #[error("verify error")]
     Verify { code_mismatch: bool },
 }
@@ -24,6 +24,16 @@ impl ErrorKind {
             _ => false,
         }
     }
+}
+
+/// The error type for Vonage API operations.
+///
+/// It is used with the [`ErrorKind`](./enum.ErrorKind.html) enum.
+#[derive(Debug, thiserror::Error)]
+#[error("{kind}")]
+pub struct Error {
+    kind: ErrorKind,
+    source: Option<anyhow::Error>,
 }
 
 impl Error {
@@ -56,6 +66,7 @@ impl Error {
         }
     }
 
+    /// The underlying cause of the error.
     #[inline]
     pub fn kind(&self) -> ErrorKind {
         self.kind

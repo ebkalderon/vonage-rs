@@ -1,3 +1,5 @@
+//! Interface to the Verify (2FA) API.
+
 pub use self::pending::*;
 pub use self::request::*;
 pub use self::search::*;
@@ -13,6 +15,7 @@ mod pending;
 mod request;
 mod search;
 
+/// The unique identifier of a particular verify request.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
 pub struct RequestId(String);
 
@@ -81,6 +84,7 @@ where
     }
 }
 
+/// Status code and error text returned by the Verify API.
 #[derive(Debug, thiserror::Error)]
 #[error("{error_text} ({status})")]
 pub struct VerifyError {

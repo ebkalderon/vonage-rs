@@ -1,9 +1,14 @@
+//! Types specific to the `/verify` endpoint.
+
 use serde::Serialize;
 
 use super::Verification;
 
+/// Request fields specific to the `/verify` endpoint.
 #[derive(Debug, Default, Serialize)]
 pub struct Normal {
+    pub brand: String,
+    pub sender_id: Option<String>,
     #[serde(rename = "lg")]
     pub language: Option<Language>,
 }
@@ -12,6 +17,7 @@ impl Verification for Normal {
     const PATH: &'static str = "";
 }
 
+/// A list of supported languages for verify SMS or TTS messages.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum Language {
     #[serde(rename = "ar-xa")]

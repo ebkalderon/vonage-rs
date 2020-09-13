@@ -1,3 +1,5 @@
+//! Authentication storage for connecting to Vonage APIs.
+
 use std::fmt::{self, Debug, Formatter};
 use std::time::SystemTime;
 

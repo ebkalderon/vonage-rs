@@ -1,3 +1,5 @@
+//! Contains types for the `/verify/check` and `/verify/control` requests.
+
 use std::hash::{Hash, Hasher};
 
 use hyper::service::Service;
@@ -12,6 +14,7 @@ use crate::HyperClient;
 
 const VERIFY_CONTROL_PATH: &str = "/control";
 
+/// A handle to a pending verify request.
 pub struct PendingVerify<C = HyperClient> {
     pub(super) http_client: C,
     pub(super) api_key: ApiKey,
@@ -24,16 +27,13 @@ impl<C> PendingVerify<C>
 where
     C: Service<Request<Body>, Response = Response<Body>, Error = hyper::Error>,
 {
-    #[inline]
-    pub fn request_id(&self) -> &RequestId {
-        &self.request_id
-    }
-
+    /// Attempts to cancel this pending verify request.
     #[inline]
     pub async fn cancel(&mut self) -> Result<()> {
         self.control_command(ControlCommand::Cancel).await
     }
 
+    /// Attempts to trigger the next phase of the request [`Workflow`](./enum.Workflow.html).
     #[inline]
     pub async fn trigger_next_event(&mut self) -> Result<()> {
         self.control_command(ControlCommand::TriggerNextEvent).await
@@ -63,6 +63,11 @@ where
         super::decode_response(response).await
     }
 
+    /// Checks whether the user-provided PIN code matches the expected value.
+    ///
+    /// Returns `Ok(Code::Match(_))` if the given PIN code is correct. Returns
+    /// `Ok(Code::Mismatch(_))` if the given PIN code is incorrect, allowing up to 3 attempts.
+    /// Returns `Err` if the code expired, the request was canceled, or some other error occurred.
     pub async fn check(mut self, code: &str) -> Result<Code<C>> {
         #[derive(Serialize)]
         struct RequestBody<'a> {
@@ -94,9 +99,16 @@ where
         }
     }
 
+    /// Returns the number of check attempts remaining (maximum 3).
     #[inline]
     pub fn attempts_remaining(&self) -> usize {
         self.attempts_remaining
+    }
+
+    /// Returns the unique request ID.
+    #[inline]
+    pub fn request_id(&self) -> &RequestId {
+        &self.request_id
     }
 }
 
@@ -125,19 +137,33 @@ impl<C> Hash for PendingVerify<C> {
     }
 }
 
+/// The result of a PIN code check.
 #[derive(Debug)]
 pub enum Code<C> {
+    /// The user-provided code matched the expected value.
     Match(Verified),
+    /// The user-provided code didn't match the expected value.
     Mismatch(PendingVerify<C>),
 }
 
+/// Details returned when a verify request succeeded.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Verified {
+    /// The originating verify request ID.
     pub request_id: RequestId,
+    /// The ID of the verification event, such as an SMS or TTS call.
     pub event_id: String,
+    /// The cost incurred for this request.
     pub price: String,
+    /// The currency code.
     pub currency: String,
+    /// The value indicates the cost (in EUR) of the calls made and messages sent for the
+    /// verification process. This field may not be present, depending on your pricing model.
+    ///
+    /// This value may be updated during and shortly after the request completes because user input
+    /// events can overlap with message/call events. When this field is present, the total cost of
+    /// the verification is the sum of this field and the price field.
     pub estimated_price_messages_sent: Option<String>,
 }
 

@@ -1,7 +1,10 @@
+//! Types specific to the `/verify/psd2` endpoint.
+
 use serde::Serialize;
 
 use super::Verification;
 
+/// Request fields specific to the `/verify/psd2` endpoint.
 #[derive(Debug, Default, Serialize)]
 pub struct Psd2 {
     pub payee: String,
@@ -14,6 +17,7 @@ impl Verification for Psd2 {
     const PATH: &'static str = "/psd2";
 }
 
+/// A list of supported languages for PSD2 SMS or TTS messages.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub enum Language {
     #[serde(rename = "bg-bg")]

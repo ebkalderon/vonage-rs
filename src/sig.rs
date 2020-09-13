@@ -1,3 +1,5 @@
+//! Contains types for SMS message signing.
+
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::fmt::{self, Debug, Formatter};
@@ -6,6 +8,7 @@ use hmac::{digest::Digest, Hmac, Mac, NewMac};
 
 pub(crate) struct Hash(pub String);
 
+/// A cryptographic signature used for signing SMS message requests.
 #[derive(Clone)]
 pub struct Signature {
     secret: Cow<'static, str>,
@@ -13,11 +16,26 @@ pub struct Signature {
 }
 
 impl Signature {
+    /// Creates a new `Signature` from the given API signature secret, as defined in the
+    /// [Vonage API dashboard](https://dashboard.nexmo.com/).
+    ///
+    /// This constructor employs [`SignatureMethod::Md5Hash`] by default. If this does not match
+    /// the method set in the Vonage dashboard, use [`Signature::with_method()`] to select the
+    /// correct value instead.
+    ///
+    /// [`SignatureMethod::Md5Hash`]: ./enum.SignatureMethod.html#variant.Md5Hash
+    /// [`Signature::with_method()`]: #method.with_method
     #[inline]
     pub fn new(secret: impl Into<Cow<'static, str>>) -> Self {
         Signature::with_method(SignatureMethod::default(), secret)
     }
 
+    /// Creates a new `Signature` from the given API signature secret and [`SignatureMethod`].
+    ///
+    /// [`SignatureMethod`]: ./enum.SignatureMethod.html
+    ///
+    /// Both the secret and signature method _must_ match the value set in the
+    /// [Vonage API dashboard](https://dashboard.nexmo.com/).
     #[inline]
     pub fn with_method<T>(method: SignatureMethod, secret: T) -> Self
     where
@@ -82,12 +100,21 @@ fn to_sanitized_str<'a>(query_params: impl IntoIterator<Item = (&'a str, &'a str
         .collect()
 }
 
+/// A list of supported SMS signature methods.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SignatureMethod {
+    /// Concatenates the query string together with the signature secret and hashes the resulting
+    /// string with MD5.
+    ///
+    /// This is the default signature method.
     Md5Hash,
+    /// Signs the query string with an MD5 HMAC using the signature secret as a key.
     Md5Hmac,
+    /// Signs the query string with a SHA-1 HMAC using the signature secret as a key.
     Sha1Hmac,
+    /// Signs the query string with a SHA-256 HMAC using the signature secret as a key.
     Sha256Hmac,
+    /// Signs the query string with a SHA-512 HMAC using the signature secret as a key.
     Sha512Hmac,
 }
 

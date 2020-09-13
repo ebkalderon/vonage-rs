@@ -1,5 +1,5 @@
-use std::io::BufRead;
 use std::error::Error;
+use std::io::BufRead;
 use std::time::Duration;
 
 use vonage::verify::{Code, CodeLength};
@@ -21,10 +21,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     println!("Created verify request with ID: {}", pending.request_id());
 
-    let matched = loop {
-        let stdin = std::io::stdin();
-        let code = stdin.lock().lines().next().unwrap()?;
+    let stdin = std::io::stdin();
+    let mut lines = stdin.lock().lines();
 
+    let matched = loop {
+        let code = lines.next().unwrap()?;
         match pending.check(&code).await? {
             Code::Match(matched) => break matched,
             Code::Mismatch(p) => {

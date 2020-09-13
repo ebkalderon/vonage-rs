@@ -1,3 +1,5 @@
+//! Contains types for the `/verify/search` request.
+
 use std::borrow::Cow;
 
 use chrono::NaiveDateTime;
@@ -10,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use super::{Error, PendingVerify, RequestId, Result};
 use crate::auth::{ApiKey, ApiSecret};
 
+/// Retrieves details of past or current verify requests.
 pub async fn search<'a, I, C>(iter: I) -> Result<Vec<Option<VerifyInfo>>>
 where
     I: IntoIterator<Item = &'a PendingVerify<C>>,
@@ -76,6 +79,7 @@ where
     }
 }
 
+/// A search result from a call to [`verify::search()`](./fn.search.html).
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct VerifyInfo {
@@ -86,19 +90,20 @@ pub struct VerifyInfo {
     pub price: String,
     pub currency: String,
     pub sender_id: String,
-    #[serde(serialize_with = "deserialize_date")]
+    #[serde(deserialize_with = "deserialize_date")]
     pub date_submitted: NaiveDateTime,
-    #[serde(serialize_with = "deserialize_date")]
+    #[serde(deserialize_with = "deserialize_date")]
     pub date_finalized: NaiveDateTime,
-    #[serde(serialize_with = "deserialize_date")]
+    #[serde(deserialize_with = "deserialize_date")]
     pub first_event_date: NaiveDateTime,
-    #[serde(serialize_with = "deserialize_date")]
+    #[serde(deserialize_with = "deserialize_date")]
     pub last_event_date: NaiveDateTime,
     pub checks: Vec<Check>,
     pub events: Vec<(EventType, String)>,
     pub estimated_price_messages_sent: Option<String>,
 }
 
+/// The current status of a particular verify request.
 #[derive(Clone, Copy, Debug, PartialEq, Deserialize)]
 pub enum VerifyStatus {
     #[serde(rename = "IN PROGRESS")]
@@ -113,28 +118,35 @@ pub enum VerifyStatus {
     Cancelled,
 }
 
+/// Details of an attempted PIN code check.
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Check {
-    #[serde(serialize_with = "deserialize_date")]
+    #[serde(deserialize_with = "deserialize_date")]
     pub date_received: NaiveDateTime,
     pub code: String,
     pub status: CheckStatus,
     pub ip_address: Option<std::net::IpAddr>,
 }
 
+/// A list of possible PIN code check outcomes.
 #[derive(Clone, Copy, Debug, PartialEq, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum CheckStatus {
+    /// The user-provided code matched the expected value.
     Valid,
+    /// The user-provided code did not match the expected value.
     Invalid,
 }
 
+/// A list of possible events that can occur in a verify request.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum EventType {
-    Tts,
+    /// The PIN was sent by SMS.
     Sms,
+    /// The PIN was spoken by voice call using TTS (text-to-speech).
+    Tts,
 }
 
 fn deserialize_date<'de, D>(deserializer: D) -> std::result::Result<NaiveDateTime, D::Error>
