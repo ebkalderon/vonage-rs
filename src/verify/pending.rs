@@ -17,6 +17,7 @@ pub struct PendingVerify<C = HyperClient> {
     pub(super) api_key: ApiKey,
     pub(super) api_secret: ApiSecret,
     pub(super) request_id: RequestId,
+    pub(super) attempts_remaining: usize,
 }
 
 impl<C> PendingVerify<C>
@@ -59,12 +60,12 @@ where
         super::decode_response(response).await
     }
 
-    pub async fn check(mut self, code: &str) -> Result<Verified> {
+    pub async fn check(mut self, code: &str) -> Result<Code<C>> {
         #[derive(Serialize)]
         struct RequestBody<'a> {
-            api_key: ApiKey,
-            api_secret: ApiSecret,
-            request_id: RequestId,
+            api_key: &'a ApiKey,
+            api_secret: &'a ApiSecret,
+            request_id: &'a RequestId,
             code: &'a str,
         }
 
@@ -72,9 +73,9 @@ where
             Method::POST,
             "/check",
             RequestBody {
-                api_key: self.api_key,
-                api_secret: self.api_secret,
-                request_id: self.request_id,
+                api_key: &self.api_key,
+                api_secret: &self.api_secret,
+                request_id: &self.request_id,
                 code,
             },
         )?;
@@ -85,7 +86,19 @@ where
             .await
             .map_err(Error::new_verify)?;
 
-        super::decode_response(response).await
+        match super::decode_response(response).await {
+            Ok(verified) => Ok(Code::Match(verified)),
+            Err(e) if e.kind().is_code_mismatch() && self.attempts_remaining > 0 => {
+                self.attempts_remaining -= 1;
+                Ok(Code::Mismatch(self))
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    #[inline]
+    pub fn attempts_remaining(&self) -> usize {
+        self.attempts_remaining
     }
 }
 
@@ -95,6 +108,7 @@ impl<C> Debug for PendingVerify<C> {
             .field("api_key", &self.api_key)
             .field("api_secret", &self.api_secret)
             .field("request_id", &self.request_id)
+            .field("attempts_remaining", &self.attempts_remaining)
             .finish()
     }
 }
@@ -111,6 +125,12 @@ impl<C> Hash for PendingVerify<C> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.request_id.hash(state);
     }
+}
+
+#[derive(Debug)]
+pub enum Code<C> {
+    Match(Verified),
+    Mismatch(PendingVerify<C>),
 }
 
 #[derive(Debug, Deserialize)]

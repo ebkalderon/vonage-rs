@@ -15,6 +15,15 @@ pub enum ErrorKind {
     Verify { code_mismatch: bool },
 }
 
+impl ErrorKind {
+    pub(crate) fn is_code_mismatch(self) -> bool {
+        match self {
+            ErrorKind::Verify { code_mismatch } => code_mismatch,
+            _ => false,
+        }
+    }
+}
+
 impl Error {
     pub(crate) fn new_auth(src: impl Into<anyhow::Error>) -> Self {
         Error::with_cause(ErrorKind::Auth, src)

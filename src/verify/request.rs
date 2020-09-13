@@ -16,6 +16,8 @@ use crate::auth::{ApiKey, ApiSecret, Auth};
 mod normal;
 mod psd2;
 
+const MAX_CHECK_ATTEMPTS: usize = 3;
+
 #[doc(hidden)]
 pub trait Verification: Default + Serialize {
     const PATH: &'static str;
@@ -136,6 +138,7 @@ where
             api_key: self.request_body.api_key,
             api_secret: self.request_body.api_secret,
             request_id,
+            attempts_remaining: MAX_CHECK_ATTEMPTS,
         })
     }
 }
