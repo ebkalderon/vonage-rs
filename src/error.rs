@@ -9,6 +9,8 @@ pub struct Error {
 pub enum ErrorKind {
     #[error("authentication error")]
     Auth,
+    #[error("HTTP error")]
+    Http,
     #[error("received unexpected status code: {0}")]
     Status(hyper::StatusCode),
     #[error("verify error")]
@@ -57,6 +59,12 @@ impl Error {
     #[inline]
     pub fn kind(&self) -> ErrorKind {
         self.kind
+    }
+}
+
+impl From<hyper::Error> for Error {
+    fn from(e: hyper::Error) -> Self {
+        Error::with_cause(ErrorKind::Http, e)
     }
 }
 

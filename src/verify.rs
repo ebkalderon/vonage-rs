@@ -72,10 +72,7 @@ where
         other => return Err(other.into()),
     }
 
-    let bytes = hyper::body::to_bytes(response.into_body())
-        .await
-        .map_err(Error::new_verify)?;
-
+    let bytes = hyper::body::to_bytes(response.into_body()).await?;
     match serde_json::from_slice(&bytes).map_err(Error::new_verify)? {
         ResponseBody::Success { inner, .. } => Ok(inner),
         ResponseBody::Error {

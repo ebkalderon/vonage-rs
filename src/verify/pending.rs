@@ -8,7 +8,7 @@ use super::{RequestId, Result};
 use std::fmt::{self, Debug, Formatter};
 
 use crate::auth::{ApiKey, ApiSecret};
-use crate::{Error, HyperClient};
+use crate::HyperClient;
 
 const VERIFY_CONTROL_PATH: &str = "/control";
 
@@ -59,12 +59,7 @@ where
             },
         )?;
 
-        let response = self
-            .http_client
-            .call(request)
-            .await
-            .map_err(Error::new_verify)?;
-
+        let response = self.http_client.call(request).await?;
         super::decode_response(response).await
     }
 
@@ -88,12 +83,7 @@ where
             },
         )?;
 
-        let response = self
-            .http_client
-            .call(request)
-            .await
-            .map_err(Error::new_verify)?;
-
+        let response = self.http_client.call(request).await?;
         match super::decode_response(response).await {
             Ok(verified) => Ok(Code::Match(verified)),
             Err(e) if e.kind().is_code_mismatch() && self.attempts_remaining > 0 => {

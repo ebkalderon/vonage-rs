@@ -56,16 +56,13 @@ where
             },
         )?;
 
-        let response = http_client.call(request).await.map_err(Error::new_verify)?;
+        let response = http_client.call(request).await?;
         match response.status() {
             StatusCode::OK => {}
             other => return Err(other.into()),
         }
 
-        let bytes = hyper::body::to_bytes(response.into_body())
-            .await
-            .map_err(Error::new_verify)?;
-
+        let bytes = hyper::body::to_bytes(response.into_body()).await?;
         let list: Vec<Response> = serde_json::from_slice(&bytes).map_err(Error::new_verify)?;
         let results = list
             .into_iter()
