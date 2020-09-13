@@ -40,10 +40,18 @@ where
     }
 
     async fn control_command(&mut self, cmd: ControlCommand) -> Result<()> {
+        #[derive(Serialize)]
+        struct RequestBody<'a> {
+            api_key: &'a ApiKey,
+            api_secret: &'a ApiSecret,
+            request_id: &'a RequestId,
+            cmd: ControlCommand,
+        }
+
         let request = super::encode_request(
             Method::POST,
             VERIFY_CONTROL_PATH,
-            ControlRequestBody {
+            RequestBody {
                 api_key: &self.api_key,
                 api_secret: &self.api_secret,
                 request_id: &self.request_id,
@@ -141,14 +149,6 @@ pub struct Verified {
     pub price: String,
     pub currency: String,
     pub estimated_price_messages_sent: Option<String>,
-}
-
-#[derive(Serialize)]
-struct ControlRequestBody<'a> {
-    api_key: &'a ApiKey,
-    api_secret: &'a ApiSecret,
-    request_id: &'a RequestId,
-    cmd: ControlCommand,
 }
 
 #[derive(Deserialize, Serialize)]
