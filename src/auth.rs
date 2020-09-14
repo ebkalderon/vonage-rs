@@ -46,7 +46,7 @@ impl Auth {
 
     pub fn to_auth_header(&self) -> Result<(HeaderName, String)> {
         let (ApiKey(key), ApiSecret(secret)) = self.api_key_pair()?;
-        let header_value = format!("Bearer {}", base64::encode(format!("{}:{}", key, secret)));
+        let header_value = format!("Basic {}", base64::encode(format!("{}:{}", key, secret)));
         Ok((AUTHORIZATION, header_value))
     }
 
