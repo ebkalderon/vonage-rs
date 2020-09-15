@@ -81,7 +81,8 @@ Below are the non-beta nice-to-have products that `vonage-rs` may support later:
 ## License
 
 `vonage-rs` is free and open source software distributed under the terms of
-either the MIT or the Apache 2.0 license, at your option.
+either the [MIT](LICENSE-MIT) or the [Apache 2.0](LICENSE-APACHE) license, at
+your option.
 
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
