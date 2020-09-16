@@ -12,6 +12,8 @@ pub enum ErrorKind {
     /// Received an unexpected HTTP status code.
     #[error("received unexpected status code: {0}")]
     Status(hyper::StatusCode),
+    #[error("error URL-encoding request body")]
+    UrlEncode,
     /// An error occurred in the [Verify (2FA)](https://developer.nexmo.com/api/verify) API.
     #[error("verify error")]
     Verify { code_mismatch: bool },
@@ -91,5 +93,11 @@ impl From<hyper::StatusCode> for Error {
 impl From<jsonwebtoken::errors::Error> for Error {
     fn from(e: jsonwebtoken::errors::Error) -> Self {
         Error::with_cause(ErrorKind::Auth, e)
+    }
+}
+
+impl From<serde_urlencoded::ser::Error> for Error {
+    fn from(e: serde_urlencoded::ser::Error) -> Self {
+        Error::with_cause(ErrorKind::UrlEncode, e)
     }
 }

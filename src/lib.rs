@@ -220,7 +220,7 @@ where
 {
     use hyper::header::{ACCEPT, CONTENT_TYPE};
 
-    let encoded = serde_urlencoded::to_string(body).map_err(Error::new_verify)?;
+    let encoded = serde_urlencoded::to_string(body)?;
     let request = Request::builder()
         .method(method)
         .uri(format!("{}{}/json", VONAGE_URL_BASE, path))
