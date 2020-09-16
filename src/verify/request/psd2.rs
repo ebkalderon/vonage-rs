@@ -14,7 +14,7 @@ pub struct Psd2 {
 }
 
 impl Verification for Psd2 {
-    const PATH: &'static str = "/psd2";
+    const PATH: &'static str = "/verify/psd2";
 }
 
 /// A list of supported languages for PSD2 SMS or TTS messages.

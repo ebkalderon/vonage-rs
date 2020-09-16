@@ -177,7 +177,7 @@ where
             request_id: RequestId,
         }
 
-        let request = super::encode_request(Method::POST, V::PATH, &self.request_body)?;
+        let request = crate::encode_request(Method::POST, V::PATH, &self.request_body)?;
         let response = self.http_client.call(request).await?;
         let ResponseBody { request_id } = super::decode_response(response).await?;
 

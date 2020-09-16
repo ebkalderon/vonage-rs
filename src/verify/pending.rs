@@ -12,8 +12,6 @@ use std::fmt::{self, Debug, Formatter};
 use crate::auth::{ApiKey, ApiSecret};
 use crate::HyperClient;
 
-const VERIFY_CONTROL_PATH: &str = "/control";
-
 /// A handle to a pending verify request.
 pub struct PendingVerify<C = HyperClient> {
     pub(super) http_client: C,
@@ -48,9 +46,9 @@ where
             cmd: ControlCommand,
         }
 
-        let request = super::encode_request(
+        let request = crate::encode_request(
             Method::POST,
-            VERIFY_CONTROL_PATH,
+            "/verify/control",
             RequestBody {
                 api_key: &self.api_key,
                 api_secret: &self.api_secret,
@@ -77,9 +75,9 @@ where
             code: &'a str,
         }
 
-        let request = super::encode_request(
+        let request = crate::encode_request(
             Method::POST,
-            "/check",
+            "/verify/check",
             RequestBody {
                 api_key: &self.api_key,
                 api_secret: &self.api_secret,

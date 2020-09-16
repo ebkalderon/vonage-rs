@@ -14,7 +14,7 @@ pub struct Normal {
 }
 
 impl Verification for Normal {
-    const PATH: &'static str = "";
+    const PATH: &'static str = "/verify";
 }
 
 /// A list of supported languages for verify SMS or TTS messages.

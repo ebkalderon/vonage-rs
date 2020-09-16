@@ -28,6 +28,7 @@ use hyper::service::Service;
 use hyper::{Request, Response};
 use hyper_tls::HttpsConnector;
 use phonenumber::PhoneNumber;
+use serde::Serialize;
 
 use self::auth::{Auth, AuthBuilder};
 use self::verify::Verify;
@@ -211,6 +212,24 @@ impl<C> Debug for ClientBuilder<C> {
             .field("sms_signature", &self.sms_signature)
             .finish()
     }
+}
+
+fn encode_request<T>(method: hyper::Method, path: &str, body: T) -> Result<Request<Body>>
+where
+    T: Serialize,
+{
+    use hyper::header::{ACCEPT, CONTENT_TYPE};
+
+    let encoded = serde_urlencoded::to_string(body).map_err(Error::new_verify)?;
+    let request = Request::builder()
+        .method(method)
+        .uri(format!("{}{}/json", VONAGE_URL_BASE, path))
+        .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .header(ACCEPT, "application/json")
+        .body(encoded.into())
+        .expect("http::RequestBuilder cannot fail");
+
+    Ok(request)
 }
 
 #[cfg(test)]

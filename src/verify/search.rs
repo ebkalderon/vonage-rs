@@ -49,9 +49,9 @@ where
     } else {
         let (client, api_key, api_secret, _) = queries[0];
         let mut http_client = client.clone();
-        let request = super::encode_request(
+        let request = crate::encode_request(
             Method::GET,
-            "/search",
+            "/verify/search",
             RequestBody {
                 api_key,
                 api_secret,

@@ -6,10 +6,10 @@ pub use self::search::*;
 
 use std::fmt::{self, Debug, Display, Formatter};
 
-use hyper::{Body, Method, Request, Response, StatusCode};
+use hyper::{Body, Response, StatusCode};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use super::{Error, Result, VONAGE_URL_BASE};
+use super::{Error, Result};
 
 mod pending;
 mod request;
@@ -23,23 +23,6 @@ impl Display for RequestId {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         Display::fmt(&self.0, f)
     }
-}
-
-fn encode_request<T>(method: Method, path: &str, body: T) -> Result<Request<Body>>
-where
-    T: Serialize,
-{
-    use hyper::header::CONTENT_TYPE;
-
-    let encoded = serde_urlencoded::to_string(body).map_err(Error::new_verify)?;
-    let request = Request::builder()
-        .method(method)
-        .uri(format!("{}/verify{}/json", VONAGE_URL_BASE, path))
-        .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
-        .body(encoded.into())
-        .expect("http::RequestBuilder cannot fail");
-
-    Ok(request)
 }
 
 async fn decode_response<T>(response: Response<Body>) -> Result<T>
