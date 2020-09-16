@@ -3,7 +3,7 @@
 use std::hash::{Hash, Hasher};
 
 use hyper::service::Service;
-use hyper::{Body, Method, Request, Response};
+use hyper::{Body, Request, Response};
 use serde::{Deserialize, Serialize};
 
 use super::{RequestId, Result};
@@ -46,8 +46,7 @@ where
             cmd: ControlCommand,
         }
 
-        let request = crate::encode_request(
-            Method::POST,
+        let request = crate::encode_request_post(
             "/verify/control",
             RequestBody {
                 api_key: &self.api_key,
@@ -75,8 +74,7 @@ where
             code: &'a str,
         }
 
-        let request = crate::encode_request(
-            Method::POST,
+        let request = crate::encode_request_post(
             "/verify/check",
             RequestBody {
                 api_key: &self.api_key,

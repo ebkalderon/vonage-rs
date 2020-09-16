@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use hyper::body::Body;
 use hyper::service::Service;
-use hyper::{Method, Request, Response};
+use hyper::{Request, Response};
 use phonenumber::{country::Id, PhoneNumber};
 use serde::{Deserialize, Serialize};
 
@@ -177,7 +177,7 @@ where
             request_id: RequestId,
         }
 
-        let request = crate::encode_request(Method::POST, V::PATH, &self.request_body)?;
+        let request = crate::encode_request_post(V::PATH, &self.request_body)?;
         let response = self.http_client.call(request).await?;
         let ResponseBody { request_id } = super::decode_response(response).await?;
 

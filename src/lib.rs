@@ -214,19 +214,37 @@ impl<C> Debug for ClientBuilder<C> {
     }
 }
 
-fn encode_request<T>(method: hyper::Method, path: &str, body: T) -> Result<Request<Body>>
+fn encode_request_post<T>(path: &str, form: T) -> Result<Request<Body>>
 where
     T: Serialize,
 {
     use hyper::header::{ACCEPT, CONTENT_TYPE};
 
-    let encoded = serde_urlencoded::to_string(body)?;
+    let encoded = serde_urlencoded::to_string(form)?;
     let request = Request::builder()
-        .method(method)
+        .method(hyper::Method::POST)
         .uri(format!("{}{}/json", VONAGE_URL_BASE, path))
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header(ACCEPT, "application/json")
         .body(encoded.into())
+        .expect("http::RequestBuilder cannot fail");
+
+    Ok(request)
+}
+
+fn encode_request_get<T>(path: &str, query_params: T) -> Result<Request<Body>>
+where
+    T: Serialize,
+{
+    use hyper::header::{ACCEPT, CONTENT_TYPE};
+
+    let encoded = serde_urlencoded::to_string(query_params)?;
+    let request = Request::builder()
+        .method(hyper::Method::GET)
+        .uri(format!("{}{}/json?{}", VONAGE_URL_BASE, path, encoded))
+        .header(CONTENT_TYPE, "application/json")
+        .header(ACCEPT, "application/json")
+        .body(Body::empty())
         .expect("http::RequestBuilder cannot fail");
 
     Ok(request)

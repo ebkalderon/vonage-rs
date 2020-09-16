@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use chrono::NaiveDateTime;
 use hyper::service::Service;
-use hyper::{Body, Method, Request, Response, StatusCode};
+use hyper::{Body, Request, Response, StatusCode};
 use phonenumber::PhoneNumber;
 use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
@@ -49,8 +49,7 @@ where
     } else {
         let (client, api_key, api_secret, _) = queries[0];
         let mut http_client = client.clone();
-        let request = crate::encode_request(
-            Method::GET,
+        let request = crate::encode_request_get(
             "/verify/search",
             RequestBody {
                 api_key,
