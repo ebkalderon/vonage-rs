@@ -18,7 +18,7 @@
 #![forbid(unsafe_code)]
 
 pub use self::error::{Error, ErrorKind};
-pub use self::sig::{Signature, SignatureMethod};
+pub use self::sig::{Signature, SignatureMethod, SignatureSecret};
 
 use std::fmt::{self, Debug, Formatter};
 
@@ -52,7 +52,7 @@ type HyperClient = hyper::Client<HttpsConnector<HttpConnector>>;
 pub struct Client<C = HyperClient> {
     http_client: C,
     authentication: Auth,
-    sms_signature: Option<Signature>,
+    sms_signature: Option<SignatureSecret>,
 }
 
 impl Client {
@@ -143,7 +143,7 @@ impl<C> Debug for Client<C> {
 pub struct ClientBuilder<C = HyperClient> {
     http_client: C,
     auth_builder: AuthBuilder,
-    sms_signature: Option<Signature>,
+    sms_signature: Option<SignatureSecret>,
 }
 
 impl<C> ClientBuilder<C> {
@@ -187,7 +187,7 @@ impl<C> ClientBuilder<C> {
     /// # Product support
     ///
     /// This feature is only supported by the [SMS](https://developer.nexmo.com/api/sms) product.
-    pub fn sms_signature(mut self, sig: Signature) -> Self {
+    pub fn sms_signature(mut self, sig: SignatureSecret) -> Self {
         self.sms_signature = Some(sig);
         self
     }
@@ -260,8 +260,8 @@ mod tests {
         let client = Client::new("api key", "private key");
 
         // Different methods of creating signatures.
-        let signature = Signature::new("secret");
-        let signature = Signature::with_method(SignatureMethod::Md5Hash, "secret");
+        let signature = SignatureSecret::new("secret");
+        let signature = SignatureSecret::with_method(SignatureMethod::Md5Hash, "secret");
 
         let client = Client::builder()
             .api_key("api key", "private key")

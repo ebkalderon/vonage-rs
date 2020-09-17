@@ -2,42 +2,53 @@
 
 use std::borrow::Cow;
 use std::collections::BTreeMap;
-use std::fmt::{self, Debug, Formatter, Write};
+use std::fmt::{self, Debug, Display, Formatter, Write};
 
 use hmac::{digest::Digest, Hmac, Mac, NewMac};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
-pub(crate) struct SignatureHash(pub String);
+/// A cryptographic SMS signature.
+#[derive(Clone, Debug, Eq, Deserialize, Serialize)]
+pub struct Signature(String);
 
-#[cfg(test)]
-impl<T: AsRef<str>> PartialEq<T> for SignatureHash {
+impl AsRef<str> for Signature {
+    fn as_ref(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl Display for Signature {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        Display::fmt(&self.0, f)
+    }
+}
+
+impl<T: AsRef<str>> PartialEq<T> for Signature {
     fn eq(&self, other: &T) -> bool {
         self.0.eq(other.as_ref())
     }
 }
 
-/// A cryptographic signature used for signing SMS message requests.
+/// A cryptographic signature secret used for signing SMS message requests.
 #[derive(Clone)]
-pub struct Signature {
+pub struct SignatureSecret {
     secret: Cow<'static, str>,
     method: SignatureMethod,
 }
 
-impl Signature {
+impl SignatureSecret {
     /// Creates a new `Signature` from the given API signature secret, as defined in the
     /// [Vonage API dashboard](https://dashboard.nexmo.com/).
     ///
     /// This constructor employs [`SignatureMethod::Md5Hash`] by default. If this does not match
-    /// the method set in the Vonage dashboard, use [`Signature::with_method()`] to select the
+    /// the method set in the Vonage dashboard, use [`SignatureSecret::with_method()`] to select the
     /// correct value instead.
     ///
     /// [`SignatureMethod::Md5Hash`]: ./enum.SignatureMethod.html#variant.Md5Hash
-    /// [`Signature::with_method()`]: #method.with_method
+    /// [`SignatureSecret::with_method()`]: #method.with_method
     #[inline]
     pub fn new(secret: impl Into<Cow<'static, str>>) -> Self {
-        Signature::with_method(SignatureMethod::default(), secret)
+        SignatureSecret::with_method(SignatureMethod::default(), secret)
     }
 
     /// Creates a new `Signature` from the given API signature secret and [`SignatureMethod`].
@@ -51,13 +62,13 @@ impl Signature {
     where
         T: Into<Cow<'static, str>>,
     {
-        Signature {
+        SignatureSecret {
             secret: secret.into(),
             method,
         }
     }
 
-    pub(crate) fn sign<T: Serialize>(&self, query_params: T) -> SignatureHash {
+    pub(crate) fn sign<T: Serialize>(&self, query_params: T) -> Signature {
         let payload = to_payload_str(query_params);
         let hash = match &self.method {
             SignatureMethod::Md5Hash => {
@@ -86,13 +97,13 @@ impl Signature {
             }
         };
 
-        SignatureHash(hash)
+        Signature(hash)
     }
 }
 
-impl Debug for Signature {
+impl Debug for SignatureSecret {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        f.debug_struct(stringify!(Signature))
+        f.debug_struct(stringify!(SignatureSecret))
             .field("secret", &"secret")
             .field("method", &self.method)
             .finish()
@@ -143,7 +154,10 @@ mod tests {
     #[test]
     fn default_sig_method_is_md5_hash() {
         assert_eq!(SignatureMethod::default(), SignatureMethod::Md5Hash);
-        assert_eq!(Signature::new("secret").method, SignatureMethod::Md5Hash);
+        assert_eq!(
+            SignatureSecret::new("secret").method,
+            SignatureMethod::Md5Hash
+        );
     }
 
     #[test]
@@ -153,7 +167,7 @@ mod tests {
             sig: &'static str,
         }
 
-        let hash = Signature::new("secret").sign(Params { sig: "hello" });
+        let hash = SignatureSecret::new("secret").sign(Params { sig: "hello" });
         assert_eq!(hash, "5ebe2294ecd0e0f08eab7690d2a6ee69");
     }
 
@@ -164,22 +178,22 @@ mod tests {
             from: &'static str,
         }
 
-        let hash = Signature::new("secret").sign(());
+        let hash = SignatureSecret::new("secret").sign(());
         assert_eq!(hash, "5ebe2294ecd0e0f08eab7690d2a6ee69");
 
-        let hash = Signature::new("secret").sign(Params { from: "VONAGE" });
+        let hash = SignatureSecret::new("secret").sign(Params { from: "VONAGE" });
         assert_eq!(hash, "129d3e7ca8b1acf36cb5ccb92dfec55c");
     }
 
     #[test]
     fn generates_sha1_signature() {
-        let hash = Signature::with_method(SignatureMethod::Sha1Hmac, "secret").sign(());
+        let hash = SignatureSecret::with_method(SignatureMethod::Sha1Hmac, "secret").sign(());
         assert_eq!(hash, "25af6174a0fcecc4d346680a72b7ce644b9a88e8");
     }
 
     #[test]
     fn generates_sha256_signature() {
-        let hash = Signature::with_method(SignatureMethod::Sha256Hmac, "secret").sign(());
+        let hash = SignatureSecret::with_method(SignatureMethod::Sha256Hmac, "secret").sign(());
         assert_eq!(
             hash,
             "f9e66e179b6747ae54108f82f8ade8b3c25d76fd30afde6c395822c530196169"
@@ -188,7 +202,7 @@ mod tests {
 
     #[test]
     fn generates_sha512_signature() {
-        let hash = Signature::with_method(SignatureMethod::Sha512Hmac, "secret").sign(());
+        let hash = SignatureSecret::with_method(SignatureMethod::Sha512Hmac, "secret").sign(());
         assert_eq!(hash, "b0e9650c5faf9cd8ae02276671545424104589b3656731ec193b25d01b07561c27637c2d4d68389d6cf5007a8632c26ec89ba80a01c77a6cdd389ec28db43901");
     }
 }
